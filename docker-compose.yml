@@ -1,0 +1,24 @@
+# Twelve-factor: all configuration comes from environment variables (docker compose reads them from .env).
+services:
+  api:
+    build: .
+    image: nutriindia-web-services
+    ports:
+      - "${PORT:-3000}:3000"
+    environment:
+      NODE_ENV: production
+      PORT: 3000
+      JWT_SECRET: ${JWT_SECRET:?Set JWT_SECRET (16+ chars) in .env}
+      JWT_EXPIRES_IN: ${JWT_EXPIRES_IN:-1h}
+      CORS_ORIGINS: ${CORS_ORIGINS:-http://localhost:3000,http://localhost:8080}
+      RATE_LIMIT_MAX: ${RATE_LIMIT_MAX:-100}
+      SQLITE_PATH: /app/data/nutriindia.db
+      NOSQL_DIR: /app/data/nosql
+      SEED_DEMO_DATA: ${SEED_DEMO_DATA:-true}
+      TRUST_PROXY: ${TRUST_PROXY:-}
+      LOG_LEVEL: ${LOG_LEVEL:-info}
+    volumes:
+      - nutri-data:/app/data
+    restart: unless-stopped
+volumes:
+  nutri-data:

@@ -1,0 +1,46 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<definitions name="NutritionService"
+    targetNamespace="http://nutriindia.example/nutrition"
+    xmlns="http://schemas.xmlsoap.org/wsdl/"
+    xmlns:soap="http://schemas.xmlsoap.org/wsdl/soap/"
+    xmlns:tns="http://nutriindia.example/nutrition"
+    xmlns:xsd="http://www.w3.org/2001/XMLSchema">
+  <types>
+    <xsd:schema targetNamespace="http://nutriindia.example/nutrition" elementFormDefault="qualified">
+      <xsd:element name="GetFoodNutritionRequest">
+        <xsd:complexType><xsd:sequence>
+          <xsd:element name="foodName" type="xsd:string"/>
+        </xsd:sequence></xsd:complexType>
+      </xsd:element>
+      <xsd:element name="GetFoodNutritionResponse">
+        <xsd:complexType><xsd:sequence>
+          <xsd:element name="name" type="xsd:string"/>
+          <xsd:element name="servingDesc" type="xsd:string"/>
+          <xsd:element name="calories" type="xsd:double"/>
+          <xsd:element name="proteinG" type="xsd:double"/>
+        </xsd:sequence></xsd:complexType>
+      </xsd:element>
+    </xsd:schema>
+  </types>
+  <message name="GetFoodNutritionIn"><part name="parameters" element="tns:GetFoodNutritionRequest"/></message>
+  <message name="GetFoodNutritionOut"><part name="parameters" element="tns:GetFoodNutritionResponse"/></message>
+  <portType name="NutritionPortType">
+    <operation name="GetFoodNutrition">
+      <input message="tns:GetFoodNutritionIn"/>
+      <output message="tns:GetFoodNutritionOut"/>
+    </operation>
+  </portType>
+  <binding name="NutritionBinding" type="tns:NutritionPortType">
+    <soap:binding style="document" transport="http://schemas.xmlsoap.org/soap/http"/>
+    <operation name="GetFoodNutrition">
+      <soap:operation soapAction="http://nutriindia.example/nutrition/GetFoodNutrition"/>
+      <input><soap:body use="literal"/></input>
+      <output><soap:body use="literal"/></output>
+    </operation>
+  </binding>
+  <service name="NutritionService">
+    <port name="NutritionPort" binding="tns:NutritionBinding">
+      <soap:address location="http://localhost:3000/soap/nutrition"/>
+    </port>
+  </service>
+</definitions>

@@ -1,0 +1,382 @@
+openapi: 3.0.3
+info:
+  title: NutriIndia Pro API
+  version: 1.0.0
+  description: |
+    Nutrition tracker web services (MCA project). REST under `/v1`, GraphQL at `/graphql`, SOAP demo at `/soap/nutrition?wsdl`.
+    Representations: `application/json` (default) or `application/xml` via the `Accept` header.
+    Errors always use the envelope `{ "error": { status, code, message, details?, correlationId } }`.
+    Click **Authorize** and paste the `accessToken` from `POST /v1/sessions` (demo: demo@nutriindia.test / Demo@1234).
+servers:
+  - url: /
+tags:
+  - { name: Users }
+  - { name: Foods }
+  - { name: Meals }
+  - { name: Tracking }
+  - { name: Documents, description: NoSQL document store }
+  - { name: External, description: Outbound calls with timeout / retry / circuit breaker }
+  - { name: GraphQL }
+  - { name: System }
+security:
+  - bearerAuth: []
+paths:
+  /health:
+    get:
+      tags: [System]
+      security: []
+      summary: Liveness probe
+      responses:
+        '200': { description: OK }
+  /v1/users:
+    post:
+      tags: [Users]
+      security: []
+      summary: Create a user account (sign up)
+      parameters: [{ $ref: '#/components/parameters/IdempotencyKey' }]
+      requestBody: { required: true, content: { application/json: { schema: { $ref: '#/components/schemas/UserCreate' } } } }
+      responses:
+        '201': { description: Created, headers: { Location: { schema: { type: string } } }, content: { application/json: { schema: { $ref: '#/components/schemas/User' } } } }
+        '409': { $ref: '#/components/responses/Error' }
+        '422': { $ref: '#/components/responses/Error' }
+        '429': { $ref: '#/components/responses/Error' }
+    get:
+      tags: [Users]
+      summary: List users (admin only, cursor pagination)
+      parameters: [{ $ref: '#/components/parameters/Limit' }, { $ref: '#/components/parameters/Cursor' }]
+      responses:
+        '200': { description: A page of users, content: { application/json: { schema: { $ref: '#/components/schemas/Page' } } } }
+        '401': { $ref: '#/components/responses/Error' }
+        '403': { $ref: '#/components/responses/Error' }
+  /v1/users/me:
+    get:
+      tags: [Users]
+      summary: Current user profile
+      responses:
+        '200': { description: OK, content: { application/json: { schema: { $ref: '#/components/schemas/User' } } } }
+        '401': { $ref: '#/components/responses/Error' }
+    patch:
+      tags: [Users]
+      summary: Update profile fields
+      requestBody: { required: true, content: { application/json: { schema: { $ref: '#/components/schemas/UserPatch' } } } }
+      responses:
+        '200': { description: Updated, content: { application/json: { schema: { $ref: '#/components/schemas/User' } } } }
+        '422': { $ref: '#/components/responses/Error' }
+    delete:
+      tags: [Users]
+      summary: Delete own account
+      responses:
+        '204': { description: Deleted }
+  /v1/users/{id}:
+    parameters: [{ $ref: '#/components/parameters/Id' }]
+    get:
+      tags: [Users]
+      summary: Get any user (admin only)
+      responses:
+        '200': { description: OK, content: { application/json: { schema: { $ref: '#/components/schemas/User' } } } }
+        '403': { $ref: '#/components/responses/Error' }
+        '404': { $ref: '#/components/responses/Error' }
+    delete:
+      tags: [Users]
+      summary: Delete any user (admin only)
+      responses:
+        '204': { description: Deleted }
+        '403': { $ref: '#/components/responses/Error' }
+        '404': { $ref: '#/components/responses/Error' }
+  /v1/sessions:
+    post:
+      tags: [Users]
+      security: []
+      summary: Create a session (log in) and receive a JWT
+      requestBody: { required: true, content: { application/json: { schema: { $ref: '#/components/schemas/SessionCreate' } } } }
+      responses:
+        '201': { description: Session created, content: { application/json: { schema: { $ref: '#/components/schemas/Session' } } } }
+        '401': { $ref: '#/components/responses/Error' }
+        '422': { $ref: '#/components/responses/Error' }
+  /v1/foods:
+    get:
+      tags: [Foods]
+      security: []
+      summary: Search the Indian foods catalogue (public, cacheable, ETag)
+      parameters:
+        - { name: q, in: query, schema: { type: string, maxLength: 50 }, description: Name contains }
+        - { $ref: '#/components/parameters/Limit' }
+        - { $ref: '#/components/parameters/Cursor' }
+      responses:
+        '200': { description: A page of foods, headers: { ETag: { schema: { type: string } }, Cache-Control: { schema: { type: string } }, Link: { schema: { type: string } } }, content: { application/json: { schema: { $ref: '#/components/schemas/Page' } }, application/xml: { schema: { type: object } } } }
+        '304': { description: Not modified (If-None-Match matched) }
+        '406': { $ref: '#/components/responses/Error' }
+    post:
+      tags: [Foods]
+      summary: Add a food (admin only)
+      parameters: [{ $ref: '#/components/parameters/IdempotencyKey' }]
+      requestBody: { required: true, content: { application/json: { schema: { $ref: '#/components/schemas/FoodInput' } } } }
+      responses:
+        '201': { description: Created, content: { application/json: { schema: { $ref: '#/components/schemas/Food' } } } }
+        '403': { $ref: '#/components/responses/Error' }
+        '409': { $ref: '#/components/responses/Error' }
+        '422': { $ref: '#/components/responses/Error' }
+  /v1/foods/{id}:
+    parameters: [{ $ref: '#/components/parameters/Id' }]
+    get:
+      tags: [Foods]
+      security: []
+      summary: Get one food
+      responses:
+        '200': { description: OK, content: { application/json: { schema: { $ref: '#/components/schemas/Food' } } } }
+        '404': { $ref: '#/components/responses/Error' }
+    put:
+      tags: [Foods]
+      summary: Replace a food (admin only)
+      requestBody: { required: true, content: { application/json: { schema: { $ref: '#/components/schemas/FoodInput' } } } }
+      responses:
+        '200': { description: Replaced, content: { application/json: { schema: { $ref: '#/components/schemas/Food' } } } }
+        '404': { $ref: '#/components/responses/Error' }
+    patch:
+      tags: [Foods]
+      summary: Partially update a food (admin only)
+      requestBody: { required: true, content: { application/json: { schema: { $ref: '#/components/schemas/FoodInput' } } } }
+      responses:
+        '200': { description: Updated, content: { application/json: { schema: { $ref: '#/components/schemas/Food' } } } }
+        '404': { $ref: '#/components/responses/Error' }
+    delete:
+      tags: [Foods]
+      summary: Delete a food (admin only; 409 if meals reference it)
+      responses:
+        '204': { description: Deleted }
+        '404': { $ref: '#/components/responses/Error' }
+        '409': { $ref: '#/components/responses/Error' }
+  /v1/meals:
+    get:
+      tags: [Meals]
+      summary: List my meals (newest first, cursor pagination with `page.next` + Link header)
+      parameters:
+        - { name: date, in: query, schema: { type: string, format: date } }
+        - { $ref: '#/components/parameters/Limit' }
+        - { $ref: '#/components/parameters/Cursor' }
+      responses:
+        '200': { description: A page of meals, content: { application/json: { schema: { $ref: '#/components/schemas/Page' } } } }
+        '400': { $ref: '#/components/responses/Error' }
+        '401': { $ref: '#/components/responses/Error' }
+    post:
+      tags: [Meals]
+      summary: Log a meal (supports Idempotency-Key)
+      parameters: [{ $ref: '#/components/parameters/IdempotencyKey' }]
+      requestBody: { required: true, content: { application/json: { schema: { $ref: '#/components/schemas/MealInput' } } } }
+      responses:
+        '201': { description: Created, headers: { Location: { schema: { type: string } }, Idempotent-Replayed: { schema: { type: string }, description: 'true when replayed' } }, content: { application/json: { schema: { $ref: '#/components/schemas/Meal' } } } }
+        '415': { $ref: '#/components/responses/Error' }
+        '422': { $ref: '#/components/responses/Error' }
+  /v1/meals/{id}:
+    parameters: [{ $ref: '#/components/parameters/Id' }]
+    get:
+      tags: [Meals]
+      summary: Get one meal
+      responses:
+        '200': { description: OK, content: { application/json: { schema: { $ref: '#/components/schemas/Meal' } } } }
+        '404': { $ref: '#/components/responses/Error' }
+    put:
+      tags: [Meals]
+      summary: Replace a meal
+      requestBody: { required: true, content: { application/json: { schema: { $ref: '#/components/schemas/MealInput' } } } }
+      responses:
+        '200': { description: Replaced, content: { application/json: { schema: { $ref: '#/components/schemas/Meal' } } } }
+        '404': { $ref: '#/components/responses/Error' }
+    patch:
+      tags: [Meals]
+      summary: Partially update a meal
+      requestBody: { required: true, content: { application/json: { schema: { $ref: '#/components/schemas/MealInput' } } } }
+      responses:
+        '200': { description: Updated, content: { application/json: { schema: { $ref: '#/components/schemas/Meal' } } } }
+        '404': { $ref: '#/components/responses/Error' }
+    delete:
+      tags: [Meals]
+      summary: Delete a meal
+      responses:
+        '204': { description: Deleted }
+        '404': { $ref: '#/components/responses/Error' }
+  /v1/weights:
+    get:
+      tags: [Tracking]
+      summary: List my weight entries (cursor pagination)
+      parameters: [{ $ref: '#/components/parameters/Limit' }, { $ref: '#/components/parameters/Cursor' }]
+      responses:
+        '200': { description: A page of weights, content: { application/json: { schema: { $ref: '#/components/schemas/Page' } } } }
+    post:
+      tags: [Tracking]
+      summary: Log a weight (supports Idempotency-Key)
+      parameters: [{ $ref: '#/components/parameters/IdempotencyKey' }]
+      requestBody: { required: true, content: { application/json: { schema: { $ref: '#/components/schemas/WeightInput' } } } }
+      responses:
+        '201': { description: Created, content: { application/json: { schema: { $ref: '#/components/schemas/Weight' } } } }
+        '422': { $ref: '#/components/responses/Error' }
+  /v1/weights/{id}:
+    parameters: [{ $ref: '#/components/parameters/Id' }]
+    delete:
+      tags: [Tracking]
+      summary: Delete a weight entry
+      responses:
+        '204': { description: Deleted }
+        '404': { $ref: '#/components/responses/Error' }
+  /v1/goals:
+    get:
+      tags: [Tracking]
+      summary: Get my goals (defaults if none set)
+      responses:
+        '200': { description: OK, content: { application/json: { schema: { $ref: '#/components/schemas/Goal' } } } }
+    put:
+      tags: [Tracking]
+      summary: Create or replace my goals (201 first time, 200 afterwards)
+      requestBody: { required: true, content: { application/json: { schema: { $ref: '#/components/schemas/Goal' } } } }
+      responses:
+        '200': { description: Replaced, content: { application/json: { schema: { $ref: '#/components/schemas/Goal' } } } }
+        '201': { description: Created, content: { application/json: { schema: { $ref: '#/components/schemas/Goal' } } } }
+        '422': { $ref: '#/components/responses/Error' }
+  /v1/summaries/daily:
+    get:
+      tags: [Tracking]
+      summary: Daily calorie/protein summary versus goals
+      parameters: [{ name: date, in: query, schema: { type: string, format: date }, description: Defaults to today (UTC) }]
+      responses:
+        '200': { description: OK, content: { application/json: { schema: { $ref: '#/components/schemas/DailySummary' } } } }
+  /v1/recipes:
+    get:
+      tags: [Documents]
+      summary: Query my recipes (MongoDB-style filters)
+      parameters:
+        - { name: tag, in: query, schema: { type: string } }
+        - { name: q, in: query, schema: { type: string }, description: Title regex (case-insensitive) }
+        - { name: maxCalories, in: query, schema: { type: number } }
+        - { $ref: '#/components/parameters/Limit' }
+      responses:
+        '200': { description: OK }
+    post:
+      tags: [Documents]
+      summary: Store a schema-flexible recipe document
+      parameters: [{ $ref: '#/components/parameters/IdempotencyKey' }]
+      requestBody: { required: true, content: { application/json: { schema: { $ref: '#/components/schemas/RecipeInput' } } } }
+      responses:
+        '201': { description: Created }
+        '422': { $ref: '#/components/responses/Error' }
+  /v1/recipes/{id}:
+    parameters: [{ name: id, in: path, required: true, schema: { type: string } }]
+    get:
+      tags: [Documents]
+      summary: Get one recipe document
+      responses:
+        '200': { description: OK }
+        '404': { $ref: '#/components/responses/Error' }
+    delete:
+      tags: [Documents]
+      summary: Delete a recipe document
+      responses:
+        '204': { description: Deleted }
+        '404': { $ref: '#/components/responses/Error' }
+  /v1/activity:
+    get:
+      tags: [Documents]
+      summary: My recent activity (event documents written automatically)
+      parameters: [{ $ref: '#/components/parameters/Limit' }]
+      responses:
+        '200': { description: OK }
+  /v1/external/food-facts:
+    get:
+      tags: [External]
+      summary: Call the mock upstream with timeout + retry (exponential backoff) + circuit breaker
+      parameters:
+        - { name: mode, in: query, schema: { type: string, enum: [ok, fail, slow, flaky], default: ok } }
+        - { name: name, in: query, schema: { type: string } }
+        - { name: scenario, in: query, schema: { type: string } }
+      responses:
+        '200': { description: Upstream answered (meta.attempts shows retries) }
+        '502': { $ref: '#/components/responses/Error' }
+        '503': { description: Circuit breaker open, content: { application/json: { schema: { $ref: '#/components/schemas/Error' } } } }
+        '504': { $ref: '#/components/responses/Error' }
+  /v1/external/soap/food-nutrition:
+    get:
+      tags: [External]
+      summary: Read the WSDL and execute the SOAP operation GetFoodNutrition
+      parameters: [{ name: name, in: query, schema: { type: string, default: Roti (Chapati) } }]
+      responses:
+        '200': { description: SOAP response (plus raw request/response XML) }
+        '404': { $ref: '#/components/responses/Error' }
+  /v1/external/breaker:
+    get:
+      tags: [External]
+      summary: Circuit breaker state
+      responses:
+        '200': { description: OK }
+  /graphql:
+    post:
+      tags: [GraphQL]
+      security: []
+      summary: GraphQL endpoint (queries - foods, me, meals, dailySummary; mutation - logMeal). Optional Bearer token.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [query]
+              properties:
+                query: { type: string, example: '{ foods(search: "dal", limit: 3) { id name calories } }' }
+                variables: { type: object }
+      responses:
+        '200': { description: Result (errors reported in the `errors` array) }
+        '400': { description: Syntax or validation error }
+  /soap/nutrition:
+    get:
+      tags: [System]
+      security: []
+      summary: WSDL of the mock SOAP service (append ?wsdl)
+      parameters: [{ name: wsdl, in: query, schema: { type: string }, example: '' }]
+      responses:
+        '200': { description: WSDL document, content: { text/xml: { schema: { type: string } } } }
+components:
+  securitySchemes:
+    bearerAuth: { type: http, scheme: bearer, bearerFormat: JWT }
+  parameters:
+    Id: { name: id, in: path, required: true, schema: { type: integer, minimum: 1 } }
+    Limit: { name: limit, in: query, schema: { type: integer, minimum: 1, maximum: 50, default: 10 } }
+    Cursor: { name: cursor, in: query, schema: { type: string }, description: Opaque token from `page.next` }
+    IdempotencyKey: { name: Idempotency-Key, in: header, required: false, schema: { type: string, maxLength: 128 }, description: Same key + same body replays the first response }
+  responses:
+    Error:
+      description: Error envelope
+      content: { application/json: { schema: { $ref: '#/components/schemas/Error' } } }
+  schemas:
+    Error:
+      type: object
+      properties:
+        error:
+          type: object
+          required: [status, code, message, correlationId]
+          properties:
+            status: { type: integer, example: 422 }
+            code: { type: string, example: VALIDATION_ERROR }
+            message: { type: string }
+            details: { type: array, items: { type: object } }
+            correlationId: { type: string, format: uuid }
+    Page:
+      type: object
+      properties:
+        data: { type: array, items: { type: object } }
+        page:
+          type: object
+          properties:
+            limit: { type: integer }
+            next: { type: string, nullable: true, example: '/v1/meals?limit=5&cursor=WyIyMDI2LTEwLTEzIiw5XQ' }
+    UserCreate: { type: object, required: [email, password, name], properties: { email: { type: string, format: email }, password: { type: string, minLength: 8 }, name: { type: string } } }
+    UserPatch: { type: object, minProperties: 1, properties: { name: { type: string }, age: { type: integer }, heightCm: { type: number } } }
+    User: { type: object, properties: { id: { type: integer }, email: { type: string }, name: { type: string }, role: { type: string, enum: [user, admin] }, age: { type: integer, nullable: true }, heightCm: { type: number, nullable: true } } }
+    SessionCreate: { type: object, required: [email, password], properties: { email: { type: string }, password: { type: string } } }
+    Session: { type: object, properties: { accessToken: { type: string }, tokenType: { type: string, example: Bearer }, expiresIn: { type: string }, user: { $ref: '#/components/schemas/User' } } }
+    FoodInput: { type: object, required: [name, servingDesc, calories, proteinG, carbsG, fatG], properties: { name: { type: string }, servingDesc: { type: string }, calories: { type: number }, proteinG: { type: number }, carbsG: { type: number }, fatG: { type: number } } }
+    Food: { allOf: [{ type: object, properties: { id: { type: integer } } }, { $ref: '#/components/schemas/FoodInput' }] }
+    MealInput: { type: object, required: [foodId, servings, mealType], properties: { foodId: { type: integer }, servings: { type: number }, mealType: { type: string, enum: [breakfast, lunch, snack, dinner] }, eatenOn: { type: string, format: date } } }
+    Meal: { type: object, properties: { id: { type: integer }, foodId: { type: integer }, foodName: { type: string }, servings: { type: number }, mealType: { type: string }, eatenOn: { type: string }, calories: { type: number }, proteinG: { type: number } } }
+    WeightInput: { type: object, required: [weightKg], properties: { weightKg: { type: number }, loggedOn: { type: string, format: date } } }
+    Weight: { type: object, properties: { id: { type: integer }, weightKg: { type: number }, loggedOn: { type: string } } }
+    Goal: { type: object, required: [dailyCalories, dailyProteinG], properties: { dailyCalories: { type: integer }, dailyProteinG: { type: number }, targetWeightKg: { type: number, nullable: true } } }
+    DailySummary: { type: object, properties: { date: { type: string }, calories: { type: number }, proteinG: { type: number }, carbsG: { type: number }, fatG: { type: number }, mealCount: { type: integer }, goalCalories: { type: integer }, goalProteinG: { type: number }, remainingCalories: { type: number }, caloriesPercent: { type: number }, proteinPercent: { type: number }, byMealType: { type: array, items: { type: object } }, latestWeightKg: { type: number, nullable: true } } }
+    RecipeInput: { type: object, required: [title, ingredients], properties: { title: { type: string }, ingredients: { type: array, items: { type: object, properties: { name: { type: string }, quantity: { type: string } } } }, tags: { type: array, items: { type: string } }, steps: { type: array, items: { type: string } }, caloriesPerServing: { type: number } } }

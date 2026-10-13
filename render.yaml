@@ -1,0 +1,18 @@
+# Render.com Blueprint: New + > Blueprint > pick your GitHub repo. Free plan => data resets on redeploy (fine for a demo).
+services:
+  - type: web
+    name: nutriindia-web-services
+    runtime: docker
+    plan: free
+    healthCheckPath: /health
+    envVars:
+      - key: JWT_SECRET
+        generateValue: true
+      - key: NODE_ENV
+        value: production
+      - key: TRUST_PROXY
+        value: "1"
+      - key: SEED_DEMO_DATA
+        value: "true"
+      - key: CORS_ORIGINS
+        value: https://nutriindia-web-services.onrender.com

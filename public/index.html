@@ -1,0 +1,97 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>NutriIndia Pro</title>
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+<header>
+  <h1>🥗 NutriIndia Pro</h1>
+  <nav>
+    <a href="/docs" target="_blank">Swagger UI</a>
+    <span id="who"></span>
+    <button id="logout" hidden>Log out</button>
+  </nav>
+</header>
+<main>
+  <section id="auth" class="card">
+    <div class="tabs"><button data-tab="login" class="active">Log in</button><button data-tab="register">Register</button></div>
+    <form id="login-form">
+      <label>Email <input name="email" type="email" value="demo@nutriindia.test" required></label>
+      <label>Password <input name="password" type="password" value="Demo@1234" required></label>
+      <button type="submit">Log in</button>
+    </form>
+    <form id="register-form" hidden>
+      <label>Name <input name="name" required maxlength="80"></label>
+      <label>Email <input name="email" type="email" required></label>
+      <label>Password (min 8) <input name="password" type="password" minlength="8" required></label>
+      <button type="submit">Create account</button>
+    </form>
+    <p id="auth-msg" class="msg"></p>
+  </section>
+
+  <div id="app" hidden>
+    <section class="card">
+      <div class="row between">
+        <h2>Daily summary</h2>
+        <input type="date" id="date">
+      </div>
+      <div id="summary"></div>
+    </section>
+
+    <section class="card">
+      <h2>Log a meal</h2>
+      <form id="meal-form" class="grid">
+        <label>Food <select name="foodId" id="food-select" required></select></label>
+        <label>Servings <input name="servings" type="number" step="0.25" min="0.25" max="20" value="1" required></label>
+        <label>Meal <select name="mealType"><option>breakfast</option><option>lunch</option><option>snack</option><option>dinner</option></select></label>
+        <button type="submit">Add meal</button>
+      </form>
+      <p id="meal-msg" class="msg"></p>
+      <ul id="meals" class="list"></ul>
+      <button id="more-meals" class="secondary" hidden>Load more</button>
+    </section>
+
+    <section class="card">
+      <h2>Weight</h2>
+      <form id="weight-form" class="grid">
+        <label>Weight (kg) <input name="weightKg" type="number" step="0.1" min="20" max="400" required></label>
+        <button type="submit">Log weight</button>
+      </form>
+      <ul id="weights" class="list"></ul>
+    </section>
+
+    <section class="card">
+      <h2>Goals</h2>
+      <form id="goal-form" class="grid">
+        <label>Calories / day <input name="dailyCalories" type="number" min="500" max="10000" required></label>
+        <label>Protein g / day <input name="dailyProteinG" type="number" min="0" max="500" required></label>
+        <label>Target weight (kg) <input name="targetWeightKg" type="number" step="0.1" min="20" max="400"></label>
+        <button type="submit">Save goals</button>
+      </form>
+      <p id="goal-msg" class="msg"></p>
+    </section>
+
+    <section class="card">
+      <h2>Web services demo</h2>
+      <p class="hint">Each button calls the API and prints status, key headers and the result below.</p>
+      <div class="buttons" id="demo-buttons">
+        <button data-demo="xml" class="secondary">XML response</button>
+        <button data-demo="etag" class="secondary">ETag → 304</button>
+        <button data-demo="idem" class="secondary">Idempotent POST ×2</button>
+        <button data-demo="graphql" class="secondary">GraphQL</button>
+        <button data-demo="soap" class="secondary">SOAP (WSDL)</button>
+        <button data-demo="retry" class="secondary">Retry + backoff</button>
+        <button data-demo="timeout" class="secondary">Timeout (504)</button>
+        <button data-demo="breaker" class="secondary">Trip circuit breaker</button>
+        <button data-demo="activity" class="secondary">NoSQL activity</button>
+      </div>
+      <pre id="demo-out">Pick a demo…</pre>
+    </section>
+  </div>
+</main>
+<script src="app.js"></script>
+</body>
+</html>
